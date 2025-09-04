@@ -1,18 +1,18 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
-	"shareapp/internal/db"
+	"shareapp/internal/application"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	// ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	err := godotenv.Load()
@@ -29,15 +29,7 @@ func main() {
 		os.Getenv("POSTGRES_DB"),
 	)
 
-	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-
 	conn, err := sql.Open("postgres", dataSourceName)
-
-	// if err := conn.PingContext(ctx); err != nil {
-	// 	logger.Error("failed to connect to db", "err", err)
-	// 	os.Exit(1)
-	// }
 
 	if err != nil {
 		logger.Error("failed to connect to db", "err", err)
@@ -46,17 +38,17 @@ func main() {
 
 	defer conn.Close()
 
-	queries := db.New(conn)
+	// queries := db.New(conn)
 
-	// user, err := queries.CreateUser(ctx, db.CreateUserParams{
-	// 	Username:     "testuser",
-	// 	Email:        "test@example.com",
-	// 	PasswordHash: "hashedpw",
-	// })
-	// if err != nil {
-	// 	logger.Error("failed to create user", "err", err)
+	app := application.New()
+
+	// if err := http.ListenAndServe(":8080", app.Router); err != nil {
+	// 	logger.Error("server failed", "err", err)
 	// 	os.Exit(1)
 	// }
 
-	// logger.Info("created user", "id", user.ID, "email", user.Email)
+	err = app.Start(context.TODO())
+	if err != nil {
+		logger.Error("failed to start app", "err", err)
+	}
 }
