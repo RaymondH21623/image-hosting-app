@@ -6,64 +6,36 @@ import (
 	"net/http"
 
 	"shareapp/internal/db"
+	"shareapp/utils"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	router  *chi.Mux
-	port    string
-	queries *db.Queries
+	router   *chi.Mux
+	port     string
+	db       *sql.DB
+	queries  *db.Queries
+	jwtMaker *utils.JWTMaker
 }
 
 func New(port, dsn string) (*Server, error) {
-	conn, err := sql.Open("postgres", dsn)
+	dbConn, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("failed to connect to db", "err", err)
 	}
-	defer conn.Close()
 
 	s := &Server{
-		router:  chi.NewRouter(),
-		port:    port,
-		queries: db.New(conn),
+		router:   chi.NewRouter(),
+		port:     port,
+		db:       dbConn,
+		queries:  db.New(dbConn),
+		jwtMaker: utils.NewJWTMaker("secret-key"),
 	}
 	s.Routes()
 	return s, nil
 }
 
-func (s *Server) Routes() {
-	s.router.Get("/health", s.handleHealthGet())
-	s.router.Get("/", s.handleHelloGet())
-	s.router.Post("/signup", s.handleSignupPost())
-	s.router.Post("/login", s.handleLoginPost())
-}
-
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
-}
-
-func (s *Server) handleHealthGet() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	}
-}
-
-func (s *Server) handleHelloGet() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, World!"))
-	}
-}
-
-func (s *Server) handleSignupPost() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Signup endpoint"))
-	}
-}
-
-func (s *Server) handleLoginPost() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Login endpoint"))
-	}
 }

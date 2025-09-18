@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -26,5 +27,6 @@ func main() {
 		log.Fatalf("failed to start server: %v", err)
 	}
 
+	fmt.Printf("Starting server at port %s\n", port)
 	log.Fatal(http.ListenAndServe(port, srv))
 }
