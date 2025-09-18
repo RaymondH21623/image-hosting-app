@@ -95,11 +95,19 @@ func (s *Server) handleLoginPost() http.HandlerFunc {
 	}
 }
 
+func (s *Server) handleMeGet() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("This is a protected route"))
+	}
+}
+
 func (s *Server) authMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("session_token")
-		if err != http.ErrNoCookie {
-			w.WriteHeader(http.StatusUnauthorized)
+		if err == http.ErrNoCookie {
+			http.Error(w, "no cookie", http.StatusUnauthorized)
+			//w.WriteHeader(http.StatusUnauthorized)
+			return
 		}
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -107,5 +115,12 @@ func (s *Server) authMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		}
 		token := c.Value
 
+		err = s.jwtMaker.VerifyToken(token)
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			//w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		h(w, r)
 	}
 }

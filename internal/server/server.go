@@ -9,6 +9,7 @@ import (
 	"shareapp/utils"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Server struct {
@@ -32,6 +33,7 @@ func New(port, dsn string) (*Server, error) {
 		queries:  db.New(dbConn),
 		jwtMaker: utils.NewJWTMaker("secret-key"),
 	}
+	s.router.Use(middleware.Logger)
 	s.Routes()
 	return s, nil
 }
