@@ -38,6 +38,9 @@ func (maker *JWTMaker) CreateToken(username string) (string, error) {
 
 func (maker *JWTMaker) VerifyToken(tokenString string) error {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(maker.secretKey), nil
 	})
 	if err != nil {

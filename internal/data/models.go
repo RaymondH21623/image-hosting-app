@@ -2,13 +2,24 @@
 // versions:
 //   sqlc v1.29.0
 
-package db
+package data
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type Medium struct {
+	ID        int32
+	UserID    uuid.UUID
+	Slug      string
+	Filename  string
+	MimeType  string
+	Size      int64
+	CreatedAt sql.NullTime
+}
 
 type User struct {
 	ID           uuid.UUID
