@@ -8,12 +8,12 @@ import (
 )
 
 func (app *application) handleSignupPost() http.HandlerFunc {
+	var input struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct {
-			Username string `json:"username"`
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
 
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -37,12 +37,14 @@ func (app *application) handleSignupPost() http.HandlerFunc {
 			return
 		}
 
-		data := map[string]string{
-			"username": user.Username,
-			"email":    user.Email,
-		}
+		// data := map[string]string{
+		// 	"username": user.Username,
+		// 	"email":    user.Email,
+		// }
 
-		err = app.writeJSON(w, http.StatusCreated, data, nil)
+		user.PasswordHash = ""
+
+		err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 		if err != nil {
 			http.Error(w, "failed to write response", http.StatusInternalServerError)
 		}

@@ -18,11 +18,11 @@ RETURNING id, user_id, slug, filename, mime_type, size, created_at
 `
 
 type CreateMediaParams struct {
-	UserID   uuid.UUID
-	Slug     string
-	Filename string
-	MimeType string
-	Size     int64
+	UserID   uuid.UUID `json:"user_id"`
+	Slug     string    `json:"slug"`
+	Filename string    `json:"filename"`
+	MimeType string    `json:"mime_type"`
+	Size     int64     `json:"size"`
 }
 
 func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Medium, error) {

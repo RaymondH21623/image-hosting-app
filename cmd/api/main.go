@@ -17,6 +17,8 @@ import (
 	"shareapp/internal/data"
 
 	"github.com/joho/godotenv"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 const version = "1.0.0"
@@ -35,6 +37,7 @@ type application struct {
 	queries  *data.Queries
 	jwtMaker *utils.JWTMaker
 	logger   *slog.Logger
+	minio    *minio.Client
 }
 
 func main() {
@@ -62,6 +65,8 @@ func main() {
 
 	// port := os.Getenv("SERVER_PORT")
 
+	ctx := context.Background()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	db, err := openDB(cfg)
@@ -74,11 +79,38 @@ func main() {
 
 	logger.Info("database connection pool established")
 
+	minioClient, err := minio.New("localhost:9000", &minio.Options{
+		Creds:  credentials.NewStaticV4("minio", "minio123", ""),
+		Secure: false,
+	})
+
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	bucketName := "media"
+	location := "us-east-1"
+
+	err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: location})
+	if err != nil {
+		// Check to see if we already own this bucket (which happens if you run this twice)
+		exists, errBucketExists := minioClient.BucketExists(ctx, bucketName)
+		if errBucketExists == nil && exists {
+			log.Printf("We already own %s\n", bucketName)
+		} else {
+			log.Fatalln(err)
+		}
+	} else {
+		log.Printf("Successfully created %s\n", bucketName)
+	}
+
 	app := &application{
 		config:   cfg,
 		db:       db,
 		queries:  data.New(db),
 		jwtMaker: utils.NewJWTMaker("secret-key"),
+		minio:    minioClient,
 		logger:   logger,
 	}
 

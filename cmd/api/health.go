@@ -6,7 +6,13 @@ import (
 
 func (app *application) handleHealthGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+
+		data := envelope{"status": "available", "environment": app.config.env, "version": version}
+
+		err := app.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			app.logger.Error(err.Error())
+			http.Error(w, "failed to write JSON response", http.StatusInternalServerError)
+		}
 	}
 }

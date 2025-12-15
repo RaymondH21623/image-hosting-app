@@ -7,18 +7,19 @@ import (
 )
 
 func (app *application) handleLoginPost() http.HandlerFunc {
+	var input struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
 
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 
-		user, err := app.queries.GetUserByEmail(r.Context(), input.Email)
+		user, err := app.queries.GetUserByEmailAuth(r.Context(), input.Email)
 		if err != nil {
 			http.Error(w, "user not found", http.StatusInternalServerError)
 			return
@@ -38,6 +39,8 @@ func (app *application) handleLoginPost() http.HandlerFunc {
 			"email":    user.Email,
 			"token":    token,
 		}
+
+		//user := data.User{}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

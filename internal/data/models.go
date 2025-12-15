@@ -12,19 +12,19 @@ import (
 )
 
 type Medium struct {
-	ID        int32
-	UserID    uuid.UUID
-	Slug      string
-	Filename  string
-	MimeType  string
-	Size      int64
-	CreatedAt sql.NullTime
+	ID        int32        `json:"id"`
+	UserID    uuid.UUID    `json:"user_id"`
+	Slug      string       `json:"slug"`
+	Filename  string       `json:"filename"`
+	MimeType  string       `json:"mime_type"`
+	Size      int64        `json:"size"`
+	CreatedAt sql.NullTime `json:"-"`
 }
 
 type User struct {
-	ID           uuid.UUID
-	Username     string
-	Email        string
-	PasswordHash string
-	CreatedAt    time.Time
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"-"`
+	CreatedAt    time.Time `json:"-"`
 }

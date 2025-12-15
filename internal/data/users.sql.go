@@ -7,6 +7,9 @@ package data
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -16,9 +19,9 @@ RETURNING id, username, email, password_hash, created_at
 `
 
 type CreateUserParams struct {
-	Username     string
-	Email        string
-	PasswordHash string
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"-"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -35,11 +38,34 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, email, created_at FROM users WHERE email = $1 LIMIT 1
+`
+
+type GetUserByEmailRow struct {
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"-"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmailAuth = `-- name: GetUserByEmailAuth :one
 SELECT id, username, email, password_hash, created_at FROM users WHERE email = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+func (q *Queries) GetUserByEmailAuth(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmailAuth, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -52,23 +78,29 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password_hash, created_at FROM users ORDER BY created_at DESC
+SELECT id, username, email, created_at FROM users ORDER BY created_at DESC
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+type ListUsersRow struct {
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"-"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
 			&i.Email,
-			&i.PasswordHash,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
