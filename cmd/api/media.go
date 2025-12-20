@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"net/http"
 	"shareapp/internal/data"
-
-	"github.com/minio/minio-go/v7"
 )
 
 func (app *application) handleMediaPost() http.HandlerFunc {
@@ -34,7 +31,7 @@ func (app *application) handleMediaPost() http.HandlerFunc {
 
 		contentType := http.DetectContentType(fileBytes)
 
-		info, err := app.minio.PutObject(r.Context(), "media", fileName, bytes.NewReader(fileBytes), fileSize, minio.PutObjectOptions{ContentType: contentType})
+		// info, err := app.minio.PutObject(r.Context(), "media", fileName, bytes.NewReader(fileBytes), fileSize, minio.PutObjectOptions{ContentType: contentType})
 
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
