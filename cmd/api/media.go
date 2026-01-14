@@ -1,18 +1,20 @@
 package main
 
 import (
-	"io"
 	"net/http"
 	"shareapp/internal/data"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/google/uuid"
 )
 
 func (app *application) handleMediaPost() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseMultipartForm(10 << 20)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+
+		ctx := r.Context()
+
+		r.Body = http.MaxBytesReader(w, r.Body, 500<<20)
 
 		file, fileHeader, err := r.FormFile("uploadFile")
 		if err != nil {
@@ -23,25 +25,34 @@ func (app *application) handleMediaPost() http.HandlerFunc {
 
 		fileName := fileHeader.Filename
 		fileSize := fileHeader.Size
-		fileBytes, err := io.ReadAll(file)
+		contentType := fileHeader.Header.Get("Content-Type")
+		userID, ok := r.Context().Value("userID").(uuid.UUID)
+		if !ok {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		_, err = app.S3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket:        aws.String("media"),
+			Key:           aws.String(fileName),
+			Body:          file,
+			ContentType:   aws.String(contentType),
+			ContentLength: &fileSize,
+		})
+
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
 
-		contentType := http.DetectContentType(fileBytes)
-
-		// info, err := app.minio.PutObject(r.Context(), "media", fileName, bytes.NewReader(fileBytes), fileSize, minio.PutObjectOptions{ContentType: contentType})
-
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
-
-		app.logger.Info("Successfully uploaded bytes: " + string(info.Size))
+		app.logger.Info("Successfully uploaded bytes: ", "filename", fileName, "size", fileSize)
 
 		media, err := app.queries.CreateMedia(r.Context(), data.CreateMediaParams{
-			//UserID: ,
+			UserID:   userID,
 			Filename: fileName,
 			MimeType: contentType,
 			Size:     fileSize,

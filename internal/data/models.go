@@ -12,13 +12,12 @@ import (
 )
 
 type Medium struct {
-	ID        int32        `json:"id"`
 	UserID    uuid.UUID    `json:"user_id"`
-	Slug      string       `json:"slug"`
 	Filename  string       `json:"filename"`
 	MimeType  string       `json:"mime_type"`
 	Size      int64        `json:"size"`
 	CreatedAt sql.NullTime `json:"-"`
+	ID        uuid.UUID    `json:"id"`
 }
 
 type User struct {

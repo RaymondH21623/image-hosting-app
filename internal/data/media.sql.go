@@ -12,14 +12,13 @@ import (
 )
 
 const createMedia = `-- name: CreateMedia :one
-INSERT INTO media (user_id, slug, filename, mime_type, size)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, user_id, slug, filename, mime_type, size, created_at
+INSERT INTO media (user_id, filename, mime_type, size)
+VALUES ($1, $2, $3, $4)
+RETURNING user_id, filename, mime_type, size, created_at, id
 `
 
 type CreateMediaParams struct {
 	UserID   uuid.UUID `json:"user_id"`
-	Slug     string    `json:"slug"`
 	Filename string    `json:"filename"`
 	MimeType string    `json:"mime_type"`
 	Size     int64     `json:"size"`
@@ -28,45 +27,24 @@ type CreateMediaParams struct {
 func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Medium, error) {
 	row := q.db.QueryRowContext(ctx, createMedia,
 		arg.UserID,
-		arg.Slug,
 		arg.Filename,
 		arg.MimeType,
 		arg.Size,
 	)
 	var i Medium
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
-		&i.Slug,
 		&i.Filename,
 		&i.MimeType,
 		&i.Size,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getMediaBySlug = `-- name: GetMediaBySlug :one
-SELECT id, user_id, slug, filename, mime_type, size, created_at FROM media WHERE slug = $1 LIMIT 1
-`
-
-func (q *Queries) GetMediaBySlug(ctx context.Context, slug string) (Medium, error) {
-	row := q.db.QueryRowContext(ctx, getMediaBySlug, slug)
-	var i Medium
-	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.Slug,
-		&i.Filename,
-		&i.MimeType,
-		&i.Size,
-		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listMediaByUser = `-- name: ListMediaByUser :many
-SELECT id, user_id, slug, filename, mime_type, size, created_at FROM media WHERE user_id = $1 ORDER BY created_at DESC
+SELECT user_id, filename, mime_type, size, created_at, id FROM media WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListMediaByUser(ctx context.Context, userID uuid.UUID) ([]Medium, error) {
@@ -79,13 +57,12 @@ func (q *Queries) ListMediaByUser(ctx context.Context, userID uuid.UUID) ([]Medi
 	for rows.Next() {
 		var i Medium
 		if err := rows.Scan(
-			&i.ID,
 			&i.UserID,
-			&i.Slug,
 			&i.Filename,
 			&i.MimeType,
 			&i.Size,
 			&i.CreatedAt,
+			&i.ID,
 		); err != nil {
 			return nil, err
 		}

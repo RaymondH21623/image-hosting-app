@@ -48,6 +48,5 @@ func (app *application) handleSignupPost() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, "failed to write response", http.StatusInternalServerError)
 		}
-
 	}
 }

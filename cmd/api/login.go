@@ -28,7 +28,7 @@ func (app *application) handleLoginPost() http.HandlerFunc {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
 		}
-		token, err := app.jwtMaker.CreateToken(input.Email)
+		token, err := app.jwtMaker.CreateToken(user.Email, user.ID)
 		if err != nil {
 			http.Error(w, "failed to generate token", http.StatusInternalServerError)
 			return

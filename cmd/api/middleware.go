@@ -1,6 +1,11 @@
 package main
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+
+	"github.com/google/uuid"
+)
 
 func (app *application) authMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -15,11 +20,23 @@ func (app *application) authMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		}
 		token := c.Value
 
-		err = app.jwtMaker.VerifyToken(token)
+		claims, err := app.jwtMaker.VerifyToken(token)
 		if err != nil {
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
-		h.ServeHTTP(w, r)
+
+		subject := claims.UserID
+
+		userID, err := uuid.Parse(subject)
+
+		if err != nil {
+			http.Error(w, "invalid user ID", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "userID", userID)
+
+		h.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

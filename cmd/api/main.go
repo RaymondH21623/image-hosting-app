@@ -12,6 +12,9 @@ import (
 	"shareapp/utils"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/lib/pq"
 
 	"shareapp/internal/data"
@@ -21,7 +24,7 @@ import (
 
 const version = "1.0.0"
 
-type config struct {
+type Config struct {
 	port int    `env:"SERVER_PORT"`
 	env  string `env:"ENVIRONMENT"`
 	db   struct {
@@ -31,16 +34,16 @@ type config struct {
 
 type application struct {
 	db       *sql.DB
-	config   config
+	config   Config
 	queries  *data.Queries
 	jwtMaker *utils.JWTMaker
 	logger   *slog.Logger
-	// minio    *minio.Client
+	S3Client *s3.Client
 }
 
 func main() {
 
-	var cfg config
+	var cfg Config
 
 	err := godotenv.Load()
 	if err != nil {
@@ -63,7 +66,7 @@ func main() {
 
 	// port := os.Getenv("SERVER_PORT")
 
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -77,39 +80,54 @@ func main() {
 
 	logger.Info("database connection pool established")
 
-	// minioClient, err := minio.New("localhost:9000", &minio.Options{
-	// 	Creds:  credentials.NewStaticV4("minio", "minio123", ""),
-	// 	Secure: false,
-	// })
-
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
 
-	bucketName := "media"
-	location := "us-east-1"
+	S3Config, err := loadAWSConfig(context.TODO())
+	if err != nil {
+		logger.Error("unable to load AWS SDK config, " + err.Error())
+		os.Exit(1)
+	}
 
-	// err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: location})
-	// if err != nil {
-	// 	// Check to see if we already own this bucket (which happens if you run this twice)
-	// 	exists, errBucketExists := minioClient.BucketExists(ctx, bucketName)
-	// 	if errBucketExists == nil && exists {
-	// 		log.Printf("We already own %s\n", bucketName)
-	// 	} else {
-	// 		log.Fatalln(err)
-	// 	}
-	// } else {
-	// 	log.Printf("Successfully created %s\n", bucketName)
-	// }
+	s3Client := s3.NewFromConfig(S3Config, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("http://localhost:3900")
+		o.UsePathStyle = true
+
+	})
+
+	ctx := context.Background()
+
+	creds, err := S3Config.Credentials.Retrieve(ctx)
+	if err != nil {
+		logger.Error("unable to retrieve AWS credentials, " + err.Error())
+		os.Exit(1)
+	}
+
+	logger.Info("aws access key id: " + creds.AccessKeyID)
+
+	createCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	_, err = s3Client.CreateBucket(createCtx, &s3.CreateBucketInput{
+		Bucket: aws.String("media"),
+	})
+
+	if err != nil {
+		logger.Error("unable to create bucket, " + err.Error())
+		os.Exit(1)
+	}
+
+	logger.Info("bucket ready", "bucket", "media")
 
 	app := &application{
 		config:   cfg,
 		db:       db,
 		queries:  data.New(db),
 		jwtMaker: utils.NewJWTMaker("secret-key"),
-		// minio:    minioClient,
-		logger: logger,
+		S3Client: s3Client,
+		logger:   logger,
 	}
 
 	srv := &http.Server{
@@ -122,7 +140,7 @@ func main() {
 	os.Exit(1)
 }
 
-func openDB(cfg config) (*sql.DB, error) {
+func openDB(cfg Config) (*sql.DB, error) {
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	fmt.Println(cfg.port)
 	if err != nil {
@@ -137,4 +155,8 @@ func openDB(cfg config) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func loadAWSConfig(ctx context.Context) (aws.Config, error) {
+	return config.LoadDefaultConfig(ctx)
 }
