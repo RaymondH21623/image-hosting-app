@@ -1,9 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE media (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    public_media_id TEXT NOT NULL UNIQUE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    slug TEXT UNIQUE NOT NULL,
     filename TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size BIGINT NOT NULL,

@@ -12,20 +12,22 @@ import (
 )
 
 const createMedia = `-- name: CreateMedia :one
-INSERT INTO media (user_id, filename, mime_type, size)
-VALUES ($1, $2, $3, $4)
-RETURNING user_id, filename, mime_type, size, created_at, id
+INSERT INTO media (public_media_id, user_id, filename, mime_type, size)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, public_media_id, user_id, filename, mime_type, size, created_at
 `
 
 type CreateMediaParams struct {
-	UserID   uuid.UUID `json:"user_id"`
-	Filename string    `json:"filename"`
-	MimeType string    `json:"mime_type"`
-	Size     int64     `json:"size"`
+	PublicMediaID string    `json:"public_media_id"`
+	UserID        uuid.UUID `json:"user_id"`
+	Filename      string    `json:"filename"`
+	MimeType      string    `json:"mime_type"`
+	Size          int64     `json:"size"`
 }
 
 func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Medium, error) {
 	row := q.db.QueryRowContext(ctx, createMedia,
+		arg.PublicMediaID,
 		arg.UserID,
 		arg.Filename,
 		arg.MimeType,
@@ -33,18 +35,38 @@ func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Mediu
 	)
 	var i Medium
 	err := row.Scan(
+		&i.ID,
+		&i.PublicMediaID,
 		&i.UserID,
 		&i.Filename,
 		&i.MimeType,
 		&i.Size,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getMediaByID = `-- name: GetMediaByID :one
+SELECT id, public_media_id, user_id, filename, mime_type, size, created_at FROM media WHERE public_media_id = $1
+`
+
+func (q *Queries) GetMediaByID(ctx context.Context, publicMediaID string) (Medium, error) {
+	row := q.db.QueryRowContext(ctx, getMediaByID, publicMediaID)
+	var i Medium
+	err := row.Scan(
 		&i.ID,
+		&i.PublicMediaID,
+		&i.UserID,
+		&i.Filename,
+		&i.MimeType,
+		&i.Size,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listMediaByUser = `-- name: ListMediaByUser :many
-SELECT user_id, filename, mime_type, size, created_at, id FROM media WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, public_media_id, user_id, filename, mime_type, size, created_at FROM media WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListMediaByUser(ctx context.Context, userID uuid.UUID) ([]Medium, error) {
@@ -57,12 +79,13 @@ func (q *Queries) ListMediaByUser(ctx context.Context, userID uuid.UUID) ([]Medi
 	for rows.Next() {
 		var i Medium
 		if err := rows.Scan(
+			&i.ID,
+			&i.PublicMediaID,
 			&i.UserID,
 			&i.Filename,
 			&i.MimeType,
 			&i.Size,
 			&i.CreatedAt,
-			&i.ID,
 		); err != nil {
 			return nil, err
 		}

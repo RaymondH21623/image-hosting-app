@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/lib/pq"
 
@@ -33,12 +34,13 @@ type Config struct {
 }
 
 type application struct {
-	db       *sql.DB
-	config   Config
-	queries  *data.Queries
-	jwtMaker *utils.JWTMaker
-	logger   *slog.Logger
-	S3Client *s3.Client
+	db            *sql.DB
+	config        Config
+	queries       *data.Queries
+	jwtMaker      *utils.JWTMaker
+	logger        *slog.Logger
+	S3Client      *s3.Client
+	presignClient *s3.PresignClient
 }
 
 func main() {
@@ -80,11 +82,6 @@ func main() {
 
 	logger.Info("database connection pool established")
 
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
 	S3Config, err := loadAWSConfig(context.TODO())
 	if err != nil {
 		logger.Error("unable to load AWS SDK config, " + err.Error())
@@ -96,6 +93,8 @@ func main() {
 		o.UsePathStyle = true
 
 	})
+
+	presigner := s3.NewPresignClient(s3Client)
 
 	ctx := context.Background()
 
@@ -122,12 +121,13 @@ func main() {
 	logger.Info("bucket ready", "bucket", "media")
 
 	app := &application{
-		config:   cfg,
-		db:       db,
-		queries:  data.New(db),
-		jwtMaker: utils.NewJWTMaker("secret-key"),
-		S3Client: s3Client,
-		logger:   logger,
+		config:        cfg,
+		db:            db,
+		queries:       data.New(db),
+		jwtMaker:      utils.NewJWTMaker("secret-key"),
+		S3Client:      s3Client,
+		presignClient: presigner,
+		logger:        logger,
 	}
 
 	srv := &http.Server{
@@ -158,5 +158,14 @@ func openDB(cfg Config) (*sql.DB, error) {
 }
 
 func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	return config.LoadDefaultConfig(ctx)
+	return config.LoadDefaultConfig(
+		ctx,
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				"",
+			),
+		),
+	)
 }

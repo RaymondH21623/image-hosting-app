@@ -13,7 +13,14 @@ func (app *application) handleSignupPost() http.HandlerFunc {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		publicID, err := utils.GenerateID()
+		if err != nil {
+			http.Error(w, "failed to generate public ID", http.StatusInternalServerError)
+			return
+		}
 
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -27,6 +34,7 @@ func (app *application) handleSignupPost() http.HandlerFunc {
 		}
 
 		user, err := app.queries.CreateUser(r.Context(), data.CreateUserParams{
+			PublicID:     publicID,
 			Username:     input.Username,
 			Email:        input.Email,
 			PasswordHash: hashedPassword,

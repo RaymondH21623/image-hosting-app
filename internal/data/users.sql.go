@@ -13,22 +13,29 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, username, email, password_hash, created_at
+INSERT INTO users (public_id, username, email, password_hash)
+VALUES ($1, $2, $3, $4)
+RETURNING id, public_id, username, email, password_hash, created_at
 `
 
 type CreateUserParams struct {
+	PublicID     string `json:"public_id"`
 	Username     string `json:"username"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.PublicID,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.PublicID,
 		&i.Username,
 		&i.Email,
 		&i.PasswordHash,
@@ -61,7 +68,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByEmailAuth = `-- name: GetUserByEmailAuth :one
-SELECT id, username, email, password_hash, created_at FROM users WHERE email = $1 LIMIT 1
+SELECT id, public_id, username, email, password_hash, created_at FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmailAuth(ctx context.Context, email string) (User, error) {
@@ -69,6 +76,7 @@ func (q *Queries) GetUserByEmailAuth(ctx context.Context, email string) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.PublicID,
 		&i.Username,
 		&i.Email,
 		&i.PasswordHash,
