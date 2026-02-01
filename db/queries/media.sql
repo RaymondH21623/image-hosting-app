@@ -4,7 +4,11 @@ VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: ListMediaByUser :many
-SELECT * FROM media WHERE user_id = $1 ORDER BY created_at DESC;
+SELECT media.* FROM media JOIN users ON media.user_id = users.id
+WHERE users.public_id = $1;
 
 -- name: GetMediaByID :one
 SELECT * FROM media WHERE public_media_id = $1;
+
+-- name: GetMediaNameByPublicID :one
+SELECT filename FROM media WHERE public_media_id = $1;

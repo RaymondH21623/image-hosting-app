@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -92,25 +93,61 @@ func (app *application) handleMediaPost() http.HandlerFunc {
 
 func (app *application) handleMediaGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//GET MEDIA BY MEDIA ID FROM URL PARAM
-		// mediaID := r.URL.Query().Get("mediaid")
+		mediaID := chi.URLParam(r, "id")
+		app.logger.Info("Fetching media with ID: ", "mediaID", mediaID)
 
-		// objectname, err := app.queries.GetMediaByPublicID(r.Context(), mediaID)
-		// if err != nil {
-		// 	app.serverErrorResponse(w, r, err)
-		// 	return
-		// }
+		objectname, err := app.queries.GetMediaNameByPublicID(r.Context(), mediaID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 
-		// app.presignClient.PresignGetObject(r.Context(), &s3.GetObjectInput{
-		// 	Bucket: aws.String("media"),
-		// 	Key:    aws.String(objectname),
-		// })
+		presignResult, err := app.presignClient.PresignGetObject(r.Context(), &s3.GetObjectInput{
+			Bucket: aws.String("media"),
+			Key:    aws.String(objectname),
+		})
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		app.logger.Info(presignResult.URL)
+
+		data := envelope{
+			"status": "success",
+			"url":    presignResult.URL,
+		}
+
+		err = app.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 	}
 }
 
-func (app *application) handleMediaList() http.HandlerFunc {
+func (app *application) handleMediaListGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//GET ALL MEDIA BY USER ID
+		userID := chi.URLParam(r, "id")
+		app.logger.Info("Listing media for user ID: ", "userID", userID)
+
+		mediaList, err := app.queries.ListMediaByUser(r.Context(), userID)
+
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		data := envelope{
+			"status": "success",
+			"data":   mediaList,
+		}
+
+		err = app.writeJSON(w, http.StatusOK, data, nil)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 	}
 }
 

@@ -40,15 +40,15 @@ func (app *application) handleLoginPost() http.HandlerFunc {
 			"token":    token,
 		}
 
-		//user := data.User{}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
 			Value:    token,
 			HttpOnly: true,
+			Path:     "/v1/",
 		})
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(resp)
 	}
 }

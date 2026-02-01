@@ -65,12 +65,24 @@ func (q *Queries) GetMediaByID(ctx context.Context, publicMediaID string) (Mediu
 	return i, err
 }
 
-const listMediaByUser = `-- name: ListMediaByUser :many
-SELECT id, public_media_id, user_id, filename, mime_type, size, created_at FROM media WHERE user_id = $1 ORDER BY created_at DESC
+const getMediaNameByPublicID = `-- name: GetMediaNameByPublicID :one
+SELECT filename FROM media WHERE public_media_id = $1
 `
 
-func (q *Queries) ListMediaByUser(ctx context.Context, userID uuid.UUID) ([]Medium, error) {
-	rows, err := q.db.QueryContext(ctx, listMediaByUser, userID)
+func (q *Queries) GetMediaNameByPublicID(ctx context.Context, publicMediaID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getMediaNameByPublicID, publicMediaID)
+	var filename string
+	err := row.Scan(&filename)
+	return filename, err
+}
+
+const listMediaByUser = `-- name: ListMediaByUser :many
+SELECT media.id, media.public_media_id, media.user_id, media.filename, media.mime_type, media.size, media.created_at FROM media JOIN users ON media.user_id = users.id
+WHERE users.public_id = $1
+`
+
+func (q *Queries) ListMediaByUser(ctx context.Context, publicID string) ([]Medium, error) {
+	rows, err := q.db.QueryContext(ctx, listMediaByUser, publicID)
 	if err != nil {
 		return nil, err
 	}
