@@ -1,17 +1,24 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "db/queries"
-    schema: "db/migrations"
+    queries: "internal/data/queries"
+    schema: "internal/data/migrations"
     gen:
       go:
         package: "data"
         out: "internal/data"
         emit_json_tags: true
         overrides:
+          - column: users.id
+            go_struct_tag: json:"-"
           - column: users.password_hash
             go_struct_tag: json:"-"
           - column: users.created_at
             go_struct_tag: json:"-"
           - column: media.created_at
             go_struct_tag: json:"-"
+          - column: media.user_id
+            go_struct_tag: json:"-"
+          - column: media.id
+            go_struct_tag: json:"-"
+          

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"shareapp/internal/data"
 	"shareapp/utils"
 	"time"
 
@@ -17,8 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/lib/pq"
-
-	"shareapp/internal/data"
 
 	"github.com/joho/godotenv"
 )

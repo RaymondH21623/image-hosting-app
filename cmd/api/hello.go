@@ -4,8 +4,6 @@ import (
 	"net/http"
 )
 
-func (app *application) handleHelloGet() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, World!"))
-	}
+func (app *application) handleHelloGet(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello, World!"))
 }

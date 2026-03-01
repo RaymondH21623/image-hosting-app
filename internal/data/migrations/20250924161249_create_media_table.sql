@@ -7,7 +7,8 @@ CREATE TABLE media (
     filename TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    version integer NOT NULL DEFAULT 1
 );
 
 -- +goose StatementEnd

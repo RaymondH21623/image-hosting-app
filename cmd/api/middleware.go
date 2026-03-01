@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -39,4 +40,16 @@ func (app *application) authMiddleware(h http.HandlerFunc) http.HandlerFunc {
 
 		h.ServeHTTP(w, r.WithContext(ctx))
 	}
+}
+
+func (app *application) recoverPanic(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				app.serverErrorResponse(w, r, fmt.Errorf("%v", err))
+			}
+		}()
+		h.ServeHTTP(w, r)
+	})
 }
