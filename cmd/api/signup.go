@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"shareapp/internal/data"
+	"shareapp/internal/validator"
 	"shareapp/utils"
 )
 
@@ -24,6 +25,8 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
+	v := validator.New()
 
 	hashedPassword, err := utils.HashPassword(input.Password)
 
