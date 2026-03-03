@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"shareapp/utils"
+	"shareapp/internal/data"
 )
 
 func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) {
@@ -24,15 +24,23 @@ func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// if err := user.Password.Matches(input.Password); err != nil {
+	domainUser := data.MapUserDBToDomain(&user)
+
+	match, err := domainUser.Password.Matches(input.Password)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if !match {
+		app.errorResponse(w, r, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+
+	// if err := utils.CheckPassword(input.Password, user.PasswordHash); err != nil {
 	// 	app.errorResponse(w, r, http.StatusUnauthorized, err.Error())
 	// 	return
 	// }
-
-	if err := utils.CheckPassword(input.Password, user.PasswordHash); err != nil {
-		app.errorResponse(w, r, http.StatusUnauthorized, err.Error())
-		return
-	}
 
 	token, err := app.jwtMaker.CreateToken(user.Email, user.ID)
 	if err != nil {

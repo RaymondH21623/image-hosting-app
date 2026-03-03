@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"shareapp/internal/data"
-	"shareapp/internal/validator"
+	"shareapp/internal/domain"
 	"shareapp/utils"
 )
 
@@ -26,20 +26,28 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	v := validator.New()
+	//v := validator.New()
 
-	hashedPassword, err := utils.HashPassword(input.Password)
+	// hashedPassword, err := utils.HashPassword(input.Password)
 
-	if err != nil {
-		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
-		return
+	// if err != nil {
+	// 	app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
+	// 	return
+	// }
+
+	user := &domain.User{
+		PublicID: publicID,
+		Username: input.Username,
+		Email:    input.Email,
 	}
 
+	user.Password.Set(input.Password)
+
 	dbUser, err := app.queries.CreateUser(r.Context(), data.CreateUserParams{
-		PublicID:     publicID,
-		Username:     input.Username,
-		Email:        input.Email,
-		PasswordHash: hashedPassword,
+		PublicID:     user.PublicID,
+		Username:     user.Username,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash(),
 	})
 
 	if err != nil {

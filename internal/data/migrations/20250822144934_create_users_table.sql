@@ -7,7 +7,7 @@ CREATE TABLE users (
     email TEXT NOT NULL UNIQUE,
     password_hash bytea NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    activated BOOLEAN NOT NULL,
+    activated BOOLEAN NOT NULL DEFAULT FALSE,
     version integer NOT NULL DEFAULT 1
 );
 -- +goose StatementEnd

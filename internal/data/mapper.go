@@ -14,6 +14,6 @@ func mapUserDomainToDB(u *domain.User) *User {
 	}
 }
 
-func mapUserDBToDomain(u *User) *domain.User {
+func MapUserDBToDomain(u *User) *domain.User {
 	return domain.NewUserFromDB(u.ID, u.PublicID, u.Username, u.Email, u.PasswordHash, u.Activated, u.Version)
 }
