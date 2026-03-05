@@ -37,11 +37,6 @@ func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// if err := utils.CheckPassword(input.Password, user.PasswordHash); err != nil {
-	// 	app.errorResponse(w, r, http.StatusUnauthorized, err.Error())
-	// 	return
-	// }
-
 	token, err := app.jwtMaker.CreateToken(user.Email, user.ID)
 	if err != nil {
 		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"shareapp/internal/data"
 	"shareapp/internal/domain"
+	"shareapp/internal/validator"
 	"shareapp/utils"
 )
 
@@ -16,7 +18,7 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 
 	publicID, err := utils.GenerateID()
 	if err != nil {
-		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
@@ -26,22 +28,24 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	//v := validator.New()
-
-	// hashedPassword, err := utils.HashPassword(input.Password)
-
-	// if err != nil {
-	// 	app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
-
 	user := &domain.User{
 		PublicID: publicID,
 		Username: input.Username,
 		Email:    input.Email,
 	}
 
-	user.Password.Set(input.Password)
+	err = user.Password.Set(input.Password)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	v := validator.New()
+
+	if domain.ValidateUser(v, user); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
 
 	dbUser, err := app.queries.CreateUser(r.Context(), data.CreateUserParams{
 		PublicID:     user.PublicID,
@@ -51,7 +55,12 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 	})
 
 	if err != nil {
-		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
+		switch {
+		case err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"":
+			app.serverErrorResponse(w, r, errors.New("duplicate email"))
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
