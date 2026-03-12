@@ -58,13 +58,15 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 
 	app.logger.Info("Successfully uploaded bytes: ", "filename", fileName, "size", fileSize)
 
-	media, err := app.queries.CreateMedia(r.Context(), data.CreateMediaParams{
-		UserID:        userID,
-		PublicMediaID: publicMediaID,
-		Filename:      fileName,
-		MimeType:      contentType,
-		Size:          fileSize,
-	})
+	media := &data.Media{
+		UserID:   userID,
+		PublicID: publicMediaID,
+		Filename: fileName,
+		MimeType: contentType,
+		Size:     fileSize,
+	}
+
+	err = app.models.Media.CreateMedia(media)
 
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -74,7 +76,7 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 	data := envelope{
 		"status":   "success",
 		"filename": fileName,
-		"mediaid":  media.PublicMediaID,
+		"mediaid":  media.PublicID,
 	}
 
 	err = app.writeJSON(w, http.StatusCreated, data, nil)
@@ -89,7 +91,7 @@ func (app *application) handleMediaGet(w http.ResponseWriter, r *http.Request) {
 	mediaID := chi.URLParam(r, "id")
 	app.logger.Info("Fetching media with ID: ", "mediaID", mediaID)
 
-	objectname, err := app.queries.GetMediaNameByPublicID(r.Context(), mediaID)
+	objectname, err := app.models.Media.GetMediaNameByPublicID(mediaID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -123,7 +125,7 @@ func (app *application) handleMediaListGet(w http.ResponseWriter, r *http.Reques
 	userID := chi.URLParam(r, "id")
 	app.logger.Info("Listing media for user ID: ", "userID", userID)
 
-	mediaList, err := app.queries.ListMediaByUser(r.Context(), userID)
+	mediaList, err := app.models.Media.ListMediaByUser(userID)
 
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

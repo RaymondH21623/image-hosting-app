@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"net/http"
 	"shareapp/internal/data"
-	"shareapp/internal/domain"
 	"shareapp/internal/validator"
 	"shareapp/utils"
 )
@@ -28,7 +26,7 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	user := &domain.User{
+	user := &data.User{
 		PublicID: publicID,
 		Username: input.Username,
 		Email:    input.Email,
@@ -42,29 +40,18 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 
 	v := validator.New()
 
-	if domain.ValidateUser(v, user); !v.Valid() {
+	if data.ValidateUser(v, user); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	dbUser, err := app.queries.CreateUser(r.Context(), data.CreateUserParams{
-		PublicID:     user.PublicID,
-		Username:     user.Username,
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash(),
-	})
-
+	err = app.models.User.CreateUser(user)
 	if err != nil {
-		switch {
-		case err.Error() == "pq: duplicate key value violates unique constraint \"users_email_key\"":
-			app.serverErrorResponse(w, r, errors.New("duplicate email"))
-		default:
-			app.serverErrorResponse(w, r, err)
-		}
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusCreated, envelope{"user": dbUser}, nil)
+	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

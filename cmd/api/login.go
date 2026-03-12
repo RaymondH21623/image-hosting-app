@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"shareapp/internal/data"
 )
 
 func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) {
@@ -18,15 +17,13 @@ func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	user, err := app.queries.GetUserByEmailAuth(r.Context(), input.Email)
+	user, err := app.models.User.GetUserByEmail(input.Email)
 	if err != nil {
-		app.errorResponse(w, r, http.StatusNotFound, err.Error())
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	domainUser := data.MapUserDBToDomain(&user)
-
-	match, err := domainUser.Password.Matches(input.Password)
+	match, err := user.Password.Matches(input.Password)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

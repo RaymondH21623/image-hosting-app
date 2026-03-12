@@ -25,17 +25,20 @@ import (
 const version = "1.0.0"
 
 type Config struct {
-	port int    `env:"SERVER_PORT"`
-	env  string `env:"ENVIRONMENT"`
+	port int
+	env  string
 	db   struct {
-		dsn string `env:"POSTGRES_URL"`
+		dsn          string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime  time.Duration
 	}
 }
 
 type application struct {
 	db            *sql.DB
 	config        Config
-	queries       *data.Queries
+	models        data.Models
 	jwtMaker      *utils.JWTMaker
 	logger        *slog.Logger
 	S3Client      *s3.Client
@@ -54,20 +57,12 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 8080, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("POSTGRES_URL"), "PostgreSQL DSN")
+
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+
 	flag.Parse()
-
-	// if err := env.Parse(&cfg); err != nil {
-	// 	log.Fatalf("Failed to read the environment variables: %v", err)
-	// 	return
-	// }
-
-	// cfg.port = os.Getenv("SERVER_PORT")
-
-	// dsn := os.Getenv("POSTGRES_URL")
-
-	// port := os.Getenv("SERVER_PORT")
-
-	//ctx := context.Background()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -122,7 +117,7 @@ func main() {
 	app := &application{
 		config:        cfg,
 		db:            db,
-		queries:       data.New(db),
+		models:        data.NewModels(db),
 		jwtMaker:      utils.NewJWTMaker("secret-key"),
 		S3Client:      s3Client,
 		presignClient: presigner,
@@ -141,10 +136,17 @@ func main() {
 
 func openDB(cfg Config) (*sql.DB, error) {
 	db, err := sql.Open("postgres", cfg.db.dsn)
-	fmt.Println(cfg.port)
+
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(cfg.db.maxOpenConns)
+
+	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+
+	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
