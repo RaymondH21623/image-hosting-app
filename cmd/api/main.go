@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"shareapp/internal/data"
+	"shareapp/internal/mailer"
 	"shareapp/utils"
 	"time"
 
@@ -33,16 +32,23 @@ type Config struct {
 		maxIdleConns int
 		maxIdleTime  time.Duration
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 type application struct {
-	db            *sql.DB
 	config        Config
 	models        data.Models
 	jwtMaker      *utils.JWTMaker
 	logger        *slog.Logger
 	S3Client      *s3.Client
 	presignClient *s3.PresignClient
+	mailer        mailer.Mailer
 }
 
 func main() {
@@ -61,6 +67,12 @@ func main() {
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Echo <no-reply@echo.raymondhoang.net>", "SMTP sender")
 
 	flag.Parse()
 
@@ -116,22 +128,19 @@ func main() {
 
 	app := &application{
 		config:        cfg,
-		db:            db,
 		models:        data.NewModels(db),
 		jwtMaker:      utils.NewJWTMaker("secret-key"),
 		S3Client:      s3Client,
 		presignClient: presigner,
 		logger:        logger,
+		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.port),
-		Handler: app.routes(),
+	err = app.serve()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
 	}
-
-	err = srv.ListenAndServe()
-	logger.Error(err.Error())
-	os.Exit(1)
 }
 
 func openDB(cfg Config) (*sql.DB, error) {

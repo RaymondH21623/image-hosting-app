@@ -121,7 +121,14 @@ func (m UserModel) UpdateUser(user *User) error {
 		RETURNING version
 	`
 
-	args := []any{user.Username, user.Email, user.Password.hash, user.Activated, user.ID, user.Version}
+	args := []any{
+		user.Username,
+		user.Email,
+		user.Password.hash,
+		user.Activated,
+		user.ID,
+		user.Version,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
