@@ -10,6 +10,7 @@ import (
 	"shareapp/internal/data"
 	"shareapp/internal/mailer"
 	"shareapp/utils"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -49,6 +50,7 @@ type application struct {
 	S3Client      *s3.Client
 	presignClient *s3.PresignClient
 	mailer        mailer.Mailer
+	wg            sync.WaitGroup
 }
 
 func main() {
