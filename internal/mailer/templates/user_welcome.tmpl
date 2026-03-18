@@ -5,7 +5,13 @@ Hi,
 
 Thanks for signing up for an Echo account. We're excited to have you on board!
 
-For future reference, your username is {{.Username}}.
+For future reference, your username is {{.username}}.
+
+Please send a request to the 'PUT /v1/users/activated' endpoint with the following activation token to activate your account:
+
+{{.activationToken}}
+
+Please note that this token will expire in 72 hours.
 
 Thanks,
 
@@ -24,7 +30,10 @@ The Echo Team
 <body>
     <p>Hi,</p>
     <p>Thanks for signing up for an Echo account. We're excited to have you on board!</p>
-    <p>For future reference, your username is {{.Username}}.</p>
+    <p>For future reference, your username is {{.username}}.</p>
+    <p>Please send a request to the 'PUT /v1/users/activated' endpoint with the following activation token to activate your account:</p>
+    <p><code>{{.activationToken}}</code></p>
+    <p>Please note that this token will expire in 72 hours.</p>
     <p>Thanks,</p>
     <p>The Echo Team</p>
 </body>
