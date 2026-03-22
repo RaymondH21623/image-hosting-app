@@ -24,6 +24,7 @@ func (app *application) routes() http.Handler {
 	// router.Get("/v1/i/{id}", app.serveMedia())
 	router.Get("/v1/u/{id}", app.handleMediaListGet)
 	router.Post("/v1/tokens/activation", app.createActivationToken)
+	router.Put("/v1/users/activated", app.handleActivateUserPut)
 
 	return app.recoverPanic(router)
 }
