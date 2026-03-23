@@ -13,7 +13,7 @@ type MediaModel struct {
 type Media struct {
 	ID        uuid.UUID    `json:"-"`
 	PublicID  string       `json:"public_id"`
-	UserID    uuid.UUID    `json:"user_id"`
+	UserID    uuid.UUID    `json:"-"`
 	Filename  string       `json:"filename"`
 	MimeType  string       `json:"mime_type"`
 	Size      int64        `json:"size"`
