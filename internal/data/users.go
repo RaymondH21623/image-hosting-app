@@ -20,6 +20,8 @@ type UserModel struct {
 	DB *sql.DB
 }
 
+var AnonymousUser = &User{}
+
 type User struct {
 	ID        uuid.UUID `json:"-"`
 	PublicID  string    `json:"public_id"`
@@ -29,6 +31,10 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	Activated bool      `json:"activated"`
 	Version   int32     `json:"-"`
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 type password struct {
