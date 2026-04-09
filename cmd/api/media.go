@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) {
@@ -27,11 +26,14 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 	fileSize := fileHeader.Size
 	contentType := fileHeader.Header.Get("Content-Type")
 
-	userID, ok := r.Context().Value("userID").(uuid.UUID)
-	if !ok {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
+	// userID, ok := r.Context().Value("userID").(uuid.UUID)
+	// if !ok {
+	// 	app.serverErrorResponse(w, r, errors.New("missing user value in request context"))
+	// 	return
+	// }
+
+	user := app.contextGetUser(r)
+	userID := user.ID
 
 	publicMediaID, err := utils.GenerateID()
 	if err != nil {
@@ -43,7 +45,7 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 		contentType = "application/octet-stream"
 	}
 
-	_, err = app.S3Client.PutObject(ctx, &s3.PutObjectInput{
+	_, err = app.S3Storage.Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String("media"),
 		Key:           aws.String(fileName),
 		Body:          file,
@@ -91,15 +93,15 @@ func (app *application) handleMediaGet(w http.ResponseWriter, r *http.Request) {
 	mediaID := chi.URLParam(r, "id")
 	app.logger.Info("Fetching media with ID: ", "mediaID", mediaID)
 
-	objectname, err := app.models.Media.GetMediaNameByPublicID(mediaID)
+	media, err := app.models.Media.GetMediaByPublicID(mediaID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	presignResult, err := app.presignClient.PresignGetObject(r.Context(), &s3.GetObjectInput{
+	presignResult, err := app.S3Storage.PresignClient.PresignGetObject(r.Context(), &s3.GetObjectInput{
 		Bucket: aws.String("media"),
-		Key:    aws.String(objectname),
+		Key:    aws.String(media.Filename),
 	})
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

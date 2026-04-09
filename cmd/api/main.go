@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	storage "shareapp/internal/aws"
 	"shareapp/internal/data"
 	"shareapp/internal/mailer"
 	"shareapp/utils"
@@ -16,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/lib/pq"
 
 	"github.com/joho/godotenv"
@@ -43,14 +43,13 @@ type Config struct {
 }
 
 type application struct {
-	config        Config
-	models        data.Models
-	jwtMaker      *utils.JWTMaker
-	logger        *slog.Logger
-	S3Client      *s3.Client
-	presignClient *s3.PresignClient
-	mailer        mailer.Mailer
-	wg            sync.WaitGroup
+	config    Config
+	models    data.Models
+	jwtMaker  *utils.JWTMaker
+	logger    *slog.Logger
+	S3Storage *storage.S3Storage
+	mailer    mailer.Mailer
+	wg        sync.WaitGroup
 }
 
 func main() {
@@ -90,52 +89,67 @@ func main() {
 
 	logger.Info("database connection pool established")
 
-	S3Config, err := loadAWSConfig(context.TODO())
-	if err != nil {
-		logger.Error("unable to load AWS SDK config, " + err.Error())
-		os.Exit(1)
-	}
+	// S3Config, err := loadAWSConfig(context.TODO())
+	// if err != nil {
+	// 	logger.Error("unable to load AWS SDK config, " + err.Error())
+	// 	os.Exit(1)
+	// }
 
-	s3Client := s3.NewFromConfig(S3Config, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String("http://localhost:3900")
-		o.UsePathStyle = true
+	// s3Client := s3.NewFromConfig(S3Config, func(o *s3.Options) {
+	// 	o.BaseEndpoint = aws.String("http://localhost:3900")
+	// 	o.UsePathStyle = true
 
-	})
+	// })
 
-	presigner := s3.NewPresignClient(s3Client)
+	// presigner := s3.NewPresignClient(s3Client)
+
+	// ctx := context.Background()
+
+	// creds, err := S3Config.Credentials.Retrieve(ctx)
+	// if err != nil {
+	// 	logger.Error("unable to retrieve AWS credentials, " + err.Error())
+	// 	os.Exit(1)
+	// }
+
+	// logger.Info("aws access key id: " + creds.AccessKeyID)
+
+	// createCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// defer cancel()
+
+	// _, err = s3Client.CreateBucket(createCtx, &s3.CreateBucketInput{
+	// 	Bucket: aws.String("media"),
+	// })
+
+	// if err != nil {
+	// 	logger.Error("unable to create bucket, " + err.Error())
+	// 	os.Exit(1)
+	// }
+
+	// logger.Info("bucket ready", "bucket", "media")
 
 	ctx := context.Background()
 
-	creds, err := S3Config.Credentials.Retrieve(ctx)
-	if err != nil {
-		logger.Error("unable to retrieve AWS credentials, " + err.Error())
-		os.Exit(1)
+	s3Config := storage.Config{
+		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		Endpoint:        "http://localhost:3900",
+		Region:          "us-east-1",
+		UsePathStyle:    true,
 	}
 
-	logger.Info("aws access key id: " + creds.AccessKeyID)
-
-	createCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	_, err = s3Client.CreateBucket(createCtx, &s3.CreateBucketInput{
-		Bucket: aws.String("media"),
-	})
-
+	storage, err := storage.New(ctx, s3Config, "media")
 	if err != nil {
-		logger.Error("unable to create bucket, " + err.Error())
+		logger.Error("unable to create S3 client, " + err.Error())
 		os.Exit(1)
 	}
-
-	logger.Info("bucket ready", "bucket", "media")
 
 	app := &application{
-		config:        cfg,
-		models:        data.NewModels(db),
-		jwtMaker:      utils.NewJWTMaker("secret-key"),
-		S3Client:      s3Client,
-		presignClient: presigner,
-		logger:        logger,
-		mailer:        mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		config:    cfg,
+		models:    data.NewModels(db),
+		jwtMaker:  utils.NewJWTMaker("secret-key"),
+		S3Storage: storage,
+		logger:    logger,
+		mailer:    mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()

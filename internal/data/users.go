@@ -120,6 +120,72 @@ func (m UserModel) GetUserByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
+func (m UserModel) GetUserByPublicID(public_id string) (*User, error) {
+	query := `
+		SELECT id, public_id, username, email, password_hash, created_at, activated, version
+		FROM users
+		WHERE public_id = $1
+	`
+
+	var user User
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, public_id).Scan(
+		&user.ID,
+		&user.PublicID,
+		&user.Username,
+		&user.Email,
+		&user.Password.hash,
+		&user.CreatedAt,
+		&user.Activated,
+		&user.Version,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (m UserModel) GetUserByID(id uuid.UUID) (*User, error) {
+	query := `
+		SELECT id, public_id, username, email, password_hash, created_at, activated, version
+		FROM users
+		WHERE id = $1
+	`
+
+	var user User
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&user.ID,
+		&user.PublicID,
+		&user.Username,
+		&user.Email,
+		&user.Password.hash,
+		&user.CreatedAt,
+		&user.Activated,
+		&user.Version,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (m UserModel) UpdateUser(user *User) error {
 	query := `
 		UPDATE users

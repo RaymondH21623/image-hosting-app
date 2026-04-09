@@ -19,7 +19,7 @@ func (app *application) routes() http.Handler {
 	router.Post("/v1/signup", app.handleSignupPost)
 	router.Post("/v1/login", app.handleCreateAuthenticationToken)
 	router.Get("/v1/me", app.requireActivatedUser(app.handleMeGet))
-	router.Post("/v1/media", app.requireActivatedUser(app.handleMediaPost))
+	router.Post("/v1/media", app.handleMediaPost)
 	router.Get("/v1/media/{id}", app.requireActivatedUser(app.handleMediaGet))
 	//router.Get("/v1/i/{id}", app.requireActivatedUserapp.serveMedia())
 	router.Get("/v1/u/{id}", app.requireActivatedUser(app.handleMediaListGet))
