@@ -26,5 +26,5 @@ func (app *application) routes() http.Handler {
 	router.Post("/v1/tokens/activation", app.createActivationToken)
 	router.Put("/v1/users/activated", app.handleActivateUserPut)
 
-	return app.recoverPanic(app.authenticate(router))
+	return app.recoverPanic(app.rateLimit(app.authenticate(router)))
 }

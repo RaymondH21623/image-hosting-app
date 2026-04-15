@@ -14,9 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	_ "github.com/lib/pq"
 
 	"github.com/joho/godotenv"
@@ -32,6 +29,11 @@ type Config struct {
 		maxOpenConns int
 		maxIdleConns int
 		maxIdleTime  time.Duration
+	}
+	limiter struct {
+		rps     float64
+		burst   int
+		enabled bool
 	}
 	smtp struct {
 		host     string
@@ -69,6 +71,10 @@ func main() {
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
 
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
@@ -88,44 +94,6 @@ func main() {
 	defer db.Close()
 
 	logger.Info("database connection pool established")
-
-	// S3Config, err := loadAWSConfig(context.TODO())
-	// if err != nil {
-	// 	logger.Error("unable to load AWS SDK config, " + err.Error())
-	// 	os.Exit(1)
-	// }
-
-	// s3Client := s3.NewFromConfig(S3Config, func(o *s3.Options) {
-	// 	o.BaseEndpoint = aws.String("http://localhost:3900")
-	// 	o.UsePathStyle = true
-
-	// })
-
-	// presigner := s3.NewPresignClient(s3Client)
-
-	// ctx := context.Background()
-
-	// creds, err := S3Config.Credentials.Retrieve(ctx)
-	// if err != nil {
-	// 	logger.Error("unable to retrieve AWS credentials, " + err.Error())
-	// 	os.Exit(1)
-	// }
-
-	// logger.Info("aws access key id: " + creds.AccessKeyID)
-
-	// createCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	// defer cancel()
-
-	// _, err = s3Client.CreateBucket(createCtx, &s3.CreateBucketInput{
-	// 	Bucket: aws.String("media"),
-	// })
-
-	// if err != nil {
-	// 	logger.Error("unable to create bucket, " + err.Error())
-	// 	os.Exit(1)
-	// }
-
-	// logger.Info("bucket ready", "bucket", "media")
 
 	ctx := context.Background()
 
@@ -181,17 +149,4 @@ func openDB(cfg Config) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
-}
-
-func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	return config.LoadDefaultConfig(
-		ctx,
-		config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(
-				os.Getenv("AWS_ACCESS_KEY_ID"),
-				os.Getenv("AWS_SECRET_ACCESS_KEY"),
-				"",
-			),
-		),
-	)
 }

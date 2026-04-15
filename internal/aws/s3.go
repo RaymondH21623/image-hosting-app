@@ -40,7 +40,7 @@ func New(ctx context.Context, cfg Config, bucket string) (*S3Storage, error) {
 	storage := &S3Storage{
 		Client:        s3Client,
 		PresignClient: presignClient,
-		Bucket:        "media",
+		Bucket:        bucket,
 	}
 
 	// if err := storage.verifyCredentials(ctx, awsCFG); err != nil {

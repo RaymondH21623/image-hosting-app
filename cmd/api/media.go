@@ -26,12 +26,6 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 	fileSize := fileHeader.Size
 	contentType := fileHeader.Header.Get("Content-Type")
 
-	// userID, ok := r.Context().Value("userID").(uuid.UUID)
-	// if !ok {
-	// 	app.serverErrorResponse(w, r, errors.New("missing user value in request context"))
-	// 	return
-	// }
-
 	user := app.contextGetUser(r)
 	userID := user.ID
 
