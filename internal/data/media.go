@@ -164,3 +164,48 @@ func (m MediaModel) DeleteMedia(id uuid.UUID) error {
 
 	return nil
 }
+
+func (m MediaModel) GetAll() ([]*Media, error) {
+	query := `
+		SELECT id, public_media_id, user_id, filename, mime_type, size, created_at, version
+		FROM media
+		ORDER BY created_at DESC
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	medium := []*Media{}
+
+	for rows.Next() {
+		var media Media
+
+		err := rows.Scan(
+			&media.ID,
+			&media.PublicID,
+			&media.UserID,
+			&media.Filename,
+			&media.MimeType,
+			&media.Size,
+			&media.CreatedAt,
+			&media.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+		medium = append(medium, &media)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return medium, nil
+}

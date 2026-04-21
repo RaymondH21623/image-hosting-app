@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"shareapp/internal/data"
 	"shareapp/internal/validator"
-	"shareapp/utils"
 	"time"
 )
 
@@ -16,7 +15,7 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		Password string `json:"password"`
 	}
 
-	publicID, err := utils.GenerateID()
+	publicID, err := app.generateNanoID()
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -83,59 +82,6 @@ func (app *application) handleSignupPost(w http.ResponseWriter, r *http.Request)
 		app.serverErrorResponse(w, r, err)
 	}
 }
-
-// func (app *application) handleLoginPost(w http.ResponseWriter, r *http.Request) {
-// 	var input struct {
-// 		Email    string `json:"email"`
-// 		Password string `json:"password"`
-// 	}
-
-// 	err := app.readJSON(w, r, &input)
-// 	if err != nil {
-// 		app.badRequestResponse(w, r, err)
-// 		return
-// 	}
-
-// 	user, err := app.models.User.GetUserByEmail(input.Email)
-// 	if err != nil {
-// 		app.serverErrorResponse(w, r, err)
-// 		return
-// 	}
-
-// 	match, err := user.Password.Matches(input.Password)
-// 	if err != nil {
-// 		app.serverErrorResponse(w, r, err)
-// 		return
-// 	}
-
-// 	if !match {
-// 		app.errorResponse(w, r, http.StatusUnauthorized, "invalid credentials")
-// 		return
-// 	}
-
-// 	token, err := app.jwtMaker.CreateToken(user.Email, user.ID)
-// 	if err != nil {
-// 		app.errorResponse(w, r, http.StatusInternalServerError, err.Error())
-// 		return
-// 	}
-
-// 	resp := map[string]string{
-// 		"username": user.Username,
-// 		"email":    user.Email,
-// 		"token":    token,
-// 	}
-
-// 	http.SetCookie(w, &http.Cookie{
-// 		Name:     "session_token",
-// 		Value:    token,
-// 		HttpOnly: true,
-// 		Path:     "/v1/",
-// 	})
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(resp)
-// }
 
 func (app *application) handleActivateUserPut(w http.ResponseWriter, r *http.Request) {
 	var input struct {

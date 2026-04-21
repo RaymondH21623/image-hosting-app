@@ -10,7 +10,6 @@ import (
 	storage "shareapp/internal/aws"
 	"shareapp/internal/data"
 	"shareapp/internal/mailer"
-	"shareapp/utils"
 	"sync"
 	"time"
 
@@ -47,7 +46,6 @@ type Config struct {
 type application struct {
 	config    Config
 	models    data.Models
-	jwtMaker  *utils.JWTMaker
 	logger    *slog.Logger
 	S3Storage *storage.S3Storage
 	mailer    mailer.Mailer
@@ -114,7 +112,6 @@ func main() {
 	app := &application{
 		config:    cfg,
 		models:    data.NewModels(db),
-		jwtMaker:  utils.NewJWTMaker("secret-key"),
 		S3Storage: storage,
 		logger:    logger,
 		mailer:    mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),

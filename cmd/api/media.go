@@ -3,14 +3,12 @@ package main
 import (
 	"net/http"
 	"shareapp/internal/data"
-	"shareapp/utils"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/go-chi/chi/v5"
 )
 
-func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) {
+func (app *application) handleCreateMedia(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	r.Body = http.MaxBytesReader(w, r.Body, 500<<20)
@@ -29,7 +27,7 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 	user := app.contextGetUser(r)
 	userID := user.ID
 
-	publicMediaID, err := utils.GenerateID()
+	publicMediaID, err := app.generateNanoID()
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -82,9 +80,15 @@ func (app *application) handleMediaPost(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (app *application) handleMediaGet(w http.ResponseWriter, r *http.Request) {
+func (app *application) handleShowMedia(w http.ResponseWriter, r *http.Request) {
 
-	mediaID := chi.URLParam(r, "id")
+	mediaID, err := app.readIDParam(r)
+
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
 	app.logger.Info("Fetching media with ID: ", "mediaID", mediaID)
 
 	media, err := app.models.Media.GetMediaByPublicID(mediaID)
@@ -116,9 +120,20 @@ func (app *application) handleMediaGet(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (app *application) handleMediaListGet(w http.ResponseWriter, r *http.Request) {
-	//GET ALL MEDIA BY USER ID
-	userID := chi.URLParam(r, "id")
+func (app *application) handleListMedia(w http.ResponseWriter, r *http.Request) {
+
+	var input struct {
+		UserID string
+		Title  string
+		data.Filters
+	}
+
+	userID, err := app.readIDParam(r)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
 	app.logger.Info("Listing media for user ID: ", "userID", userID)
 
 	mediaList, err := app.models.Media.ListMediaByUser(userID)
@@ -140,6 +155,10 @@ func (app *application) handleMediaListGet(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) handleMediaDelete(w http.ResponseWriter, r *http.Request) {
+func (app *application) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (app *application) handleUpdateMedia(w http.ResponseWriter, r *http.Request) {
 
 }

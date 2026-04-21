@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type envelope map[string]any
@@ -65,6 +68,33 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		}
 	}
 	return nil
+}
+
+func (app *application) readIDParam(r *http.Request) (string, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return "", errors.New("id is required")
+	}
+
+	if len(id) != 9 {
+		return "", errors.New("invalid id")
+	}
+
+	for _, char := range id {
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') {
+			return "", errors.New("id must be alphanumeric")
+		}
+	}
+
+	return id, nil
+}
+
+func (app *application) generateNanoID() (string, error) {
+	id, err := gonanoid.Generate("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 9)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func (app *application) background(fn func()) {

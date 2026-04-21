@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (app *application) handleHealthGet(w http.ResponseWriter, r *http.Request) {
+func (app *application) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 	data := envelope{
 		"status": "available",
 		"system_info": map[string]string{
