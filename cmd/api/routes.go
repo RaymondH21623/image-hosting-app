@@ -22,7 +22,8 @@ func (app *application) routes() http.Handler {
 	router.Post("/v1/media", app.handleCreateMedia)
 	router.Get("/v1/media/{id}", app.requireActivatedUser(app.handleShowMedia))
 	//router.Get("/v1/i/{id}", app.requireActivatedUserapp.serveMedia())
-	router.Get("/v1/u/{id}", app.requireActivatedUser(app.handleListMedia))
+	router.Get("/v1/{id}/media", app.requireActivatedUser(app.handleListUserMedia))
+	router.Get("/v1/media", app.requireActivatedUser(app.handleListMedia))
 	router.Post("/v1/tokens/activation", app.createActivationToken)
 	router.Put("/v1/users/activated", app.handleActivateUserPut)
 

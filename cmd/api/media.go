@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"shareapp/internal/data"
+	"shareapp/internal/validator"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -85,7 +86,7 @@ func (app *application) handleShowMedia(w http.ResponseWriter, r *http.Request) 
 	mediaID, err := app.readIDParam(r)
 
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -109,6 +110,7 @@ func (app *application) handleShowMedia(w http.ResponseWriter, r *http.Request) 
 
 	data := envelope{
 		"status": "success",
+		"media":  media,
 		"url":    presignResult.URL,
 	}
 
@@ -123,20 +125,27 @@ func (app *application) handleShowMedia(w http.ResponseWriter, r *http.Request) 
 func (app *application) handleListMedia(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
-		UserID string
-		Title  string
+		Title string
 		data.Filters
 	}
 
-	userID, err := app.readIDParam(r)
-	if err != nil {
-		app.badRequestResponse(w, r, err)
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	input.Title = app.readString(qs, "title", "")
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	app.logger.Info("Listing media for user ID: ", "userID", userID)
+	app.logger.Info("Listing media for all users")
 
-	mediaList, err := app.models.Media.ListMediaByUser(userID)
+	mediaList, err := app.models.Media.GetAll(input.Title, input.Filters)
 
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -161,4 +170,31 @@ func (app *application) handleDeleteMedia(w http.ResponseWriter, r *http.Request
 
 func (app *application) handleUpdateMedia(w http.ResponseWriter, r *http.Request) {
 
+}
+
+func (app *application) handleListUserMedia(w http.ResponseWriter, r *http.Request) {
+	userID, err := app.readIDParam(r)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	app.logger.Info("Listing media for user with ID: ", "userID", userID)
+
+	mediaList, err := app.models.Media.ListMediaByUser(userID)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	data := envelope{
+		"status": "success",
+		"data":   mediaList,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, data, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }

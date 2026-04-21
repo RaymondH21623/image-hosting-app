@@ -136,7 +136,46 @@ func (m MediaModel) GetMedia(id uuid.UUID) (*Media, error) {
 }
 
 func (m MediaModel) ListMediaByUser(id string) ([]*Media, error) {
-	return nil, nil
+	query := `
+		SELECT m.id, m.public_media_id, m.user_id, m.filename, m.mime_type, m.size, m.created_at, m.version
+		FROM media m
+		JOIN users ON m.user_id = users.id
+		WHERE users.public_id = $1
+		ORDER BY m.created_at DESC
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	medium := []*Media{}
+	for rows.Next() {
+		var media Media
+		err := rows.Scan(
+			&media.ID,
+			&media.PublicID,
+			&media.UserID,
+			&media.Filename,
+			&media.MimeType,
+			&media.Size,
+			&media.CreatedAt,
+			&media.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+		medium = append(medium, &media)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return medium, nil
 }
 
 func (m MediaModel) DeleteMedia(id uuid.UUID) error {
@@ -165,7 +204,7 @@ func (m MediaModel) DeleteMedia(id uuid.UUID) error {
 	return nil
 }
 
-func (m MediaModel) GetAll() ([]*Media, error) {
+func (m MediaModel) GetAll(title string, filters Filters) ([]*Media, error) {
 	query := `
 		SELECT id, public_media_id, user_id, filename, mime_type, size, created_at, version
 		FROM media
