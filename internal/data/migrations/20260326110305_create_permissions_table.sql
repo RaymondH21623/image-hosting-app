@@ -18,6 +18,6 @@ INSERT INTO permissions (code) VALUES
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE permissions;
 DROP TABLE users_permissions;
+DROP TABLE permissions;
 -- +goose StatementEnd
