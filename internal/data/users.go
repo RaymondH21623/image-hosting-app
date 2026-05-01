@@ -288,3 +288,7 @@ func ValidateUser(v *validator.Validator, user *User) {
 		panic("missing password hash for user")
 	}
 }
+
+func ValidateUserID(v *validator.Validator, id string) {
+	v.Check(validator.Matches(id, validator.UserPublicIDRX), "id", "must be a valid user public id")
+}

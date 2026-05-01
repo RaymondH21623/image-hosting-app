@@ -4,6 +4,7 @@ CREATE TABLE media (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     public_media_id TEXT NOT NULL UNIQUE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
     filename TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size BIGINT NOT NULL,

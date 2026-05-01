@@ -125,7 +125,8 @@ func (app *application) handleShowMedia(w http.ResponseWriter, r *http.Request) 
 func (app *application) handleListMedia(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
-		Title string
+		Title  string
+		UserID string
 		data.Filters
 	}
 
@@ -134,18 +135,27 @@ func (app *application) handleListMedia(w http.ResponseWriter, r *http.Request) 
 	qs := r.URL.Query()
 
 	input.Title = app.readString(qs, "title", "")
+	input.UserID = app.readString(qs, "user_id", "")
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
 	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.Sort = app.readString(qs, "sort", "created_at")
+	input.Filters.SortSafelist = []string{"created_at", "title", "size", "type", "-created_at", "-title", "-size", "-type"}
+	input.Filters.Filetype = app.readString(qs, "filetype", "")
+	input.Filters.FiletypeSafelist = []string{"image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", ""}
 
-	if !v.Valid() {
+	if data.ValidateUserID(v, input.UserID); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
 	app.logger.Info("Listing media for all users")
 
-	mediaList, err := app.models.Media.GetAll(input.Title, input.Filters)
+	mediaList, err := app.models.Media.GetAll(input.Title, input.Filters.Filetype, input.Filters)
 
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -153,8 +163,9 @@ func (app *application) handleListMedia(w http.ResponseWriter, r *http.Request) 
 	}
 
 	data := envelope{
-		"status": "success",
-		"data":   mediaList,
+		"status":  "success",
+		"filters": input,
+		"data":    mediaList,
 	}
 
 	err = app.writeJSON(w, http.StatusOK, data, nil)

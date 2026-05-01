@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -204,12 +205,13 @@ func (m MediaModel) DeleteMedia(id uuid.UUID) error {
 	return nil
 }
 
-func (m MediaModel) GetAll(title string, filters Filters) ([]*Media, error) {
-	query := `
+func (m MediaModel) GetAll(title string, filetype string, filters Filters) ([]*Media, error) {
+	query := fmt.Sprintf(`
 		SELECT id, public_media_id, user_id, filename, mime_type, size, created_at, version
 		FROM media
-		ORDER BY created_at DESC
-	`
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (mime_type = $2 OR $2 = '')
+		ORDER BY %s %s`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

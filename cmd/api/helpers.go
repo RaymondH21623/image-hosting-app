@@ -76,9 +76,6 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 
 func (app *application) readIDParam(r *http.Request) (string, error) {
 	id := chi.URLParam(r, "id")
-	if id == "" {
-		return "", errors.New("id is required")
-	}
 
 	if len(id) != 9 {
 		return "", errors.New("invalid id")
